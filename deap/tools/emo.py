@@ -648,7 +648,8 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     lambda_list = []
 
     for i in range(0, nobj):
-        lambda_list[i] = 1 / (z_v[i] – z_r[i])
+        a = z_v[i] – z_r[i]
+        lambda_list[i] = 1 / a
 
     rho = 10**-6
 
