@@ -593,7 +593,7 @@ def _partition(array, begin, end):
     # LBS NSGAII #
 #####################################################################
 
-def selLBS(individuals, k, nd='standard', z_v, z_r, v):
+def selLBS(individuals, k, z_v, z_r, v, nd='standard'):
     """Apply NSGA-II selection operator on the *individuals*. Usually, the
     size of *individuals* will be larger than *k* because any individual
     present in *individuals* will appear in the returned list at most once.
