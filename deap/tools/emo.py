@@ -589,6 +589,149 @@ def _partition(array, begin, end):
         else:
             return j
 
+#####################################################################
+    # LBS NSGAII #
+#####################################################################
+
+def selLBS(individuals, k, nd='standard', z_v, z_r):
+    """Apply NSGA-II selection operator on the *individuals*. Usually, the
+    size of *individuals* will be larger than *k* because any individual
+    present in *individuals* will appear in the returned list at most once.
+    Having the size of *individuals* equals to *k* will have no effect other
+    than sorting the population according to their front rank. The
+    list returned contains references to the input *individuals*. For more
+    details on the NSGA-II operator see [Deb2002]_.
+    :param individuals: A list of individuals to select from.
+    :param k: The number of individuals to select.
+    :param nd: Specify the non-dominated algorithm to use: 'standard' or 'log'.
+    :returns: A list of selected individuals.
+    .. [Deb2002] Deb, Pratab, Agarwal, and Meyarivan, "A fast elitist
+       non-dominated sorting genetic algorithm for multi-objective
+       optimization: NSGA-II", 2002.
+    """
+        if nd == 'standard':
+            pareto_fronts = sortNondominated(individuals, k)
+        elif nd == 'log':
+            pareto_fronts = sortLogNondominated(individuals, k)
+        else:
+            raise Exception('selNSGA2: The choice of non-dominated sorting '
+                            'method "{0}" is invalid.'.format(nd))
+
+        for front in pareto_fronts:
+            assignLBSCrowdingDist(front, z_v, z_r)
+
+        chosen = list(chain(*pareto_fronts[:-1]))
+        k = k - len(chosen)
+        if k > 0:
+            sorted_front = sorted(pareto_fronts[-1], key=attrgetter("fitness.crowding_dist"), reverse=True)
+            chosen.extend(sorted_front[:k])
+
+        return chosen
+
+def assignLBSCrowdingDist(individuals, z_v, z_r, v):
+    """Assign a crowding distance to each individual's fitness. The
+    crowding distance can be retrieve via the :attr:`crowding_dist`
+    attribute of each individual's fitness.
+    """
+
+    if len(individuals) == 0:
+       return
+
+    # this creates a list of fitness values for all individuals, with an index referring to the original list of individuals so the crowding distance can later be assignme
+    crowd = [[ind.fitness.values, i] for i, ind in enumerate(individuals)]
+    # TODO need to pass the aspiration point, reservation point, and veto points to this function
+    # TODO where does the aspiration point come in?
+    # TODO there is a mistake here, z_v, z_r and v_j should be present, I've mixed up the z_v and v_j arrays, needs correcting.
+
+    nobj = len(individuals[0].fitness.values)
+
+    lambda_list = []
+
+    for i in range(0, nobj):
+        lambda_list[i] = 1 / (z_v[i] – z_r[i])
+
+    rho = 10**-6
+
+    for i in range(0,len(individuals)):
+        max_term = []
+        sum_term = []
+        for j in range(nobj):
+            max_term[j] = lambda_list[j] * (crowd[i][0][j] - z_r[j])
+            sum_term[j] = crowd[i][0][j] - z_r[j]
+
+        # inserts a new level into the list with a d value in for each individual
+        d = max(max_term) + rho * sum(sum_term)
+        crowd[i].append(d)
+
+    # this sorts the crowd list by the d value which is index [2] in each individual [0] is objective values and [1] is i value
+    crowd.sort(key=lambda ind:ind[2])
+
+    # find the central point
+    z_c = min(crowd, key=lambda ind:ind[2])
+
+    # and remove it from the crowd list
+    crowd.remove(min(crowd, key=lambda ind:ind[2]))
+
+    # find the outranking solutions
+    for i in range(0,len(individuals)):
+        m_v = [0]
+        for j in range(0, nobj):
+            if (crowd[i][0][j] - z_c[0][j]) >= v[j]:
+                # crowd[i][3] is where the m_v values are stored
+                m_v[0] += 1
+                crowd[i].append(m_v)
+
+    # assign delta values to solutions that outrank the central point
+    for i in range(0, len(individuals)):
+        if crowd[i][3] == 0:
+            delta_temp = []
+            for j in range(0, nobj):
+                delta_temp[j] = crowd[i][0][j] - z_c[0][j]
+            # crowd[i][4] is where the delta values are stored
+            delta = max(delta_temp)
+            crowd[i].append(delta)
+
+    # filter those individuals that have m_v == 0
+    outranking = [x for x in crowd if x[3] == 0]
+
+    # and remove them from the crowd list
+    crowd.remove([x for x in crowd if x[3] == 0])
+
+    # sort the outranking solutions by delta value
+    outranking.sort(key=lambda x: x[4])
+
+    # Building the list sorted by Z-c first, then outranking solutions sorted by delta, then remaining solutions sorted by d
+    crowd_sorted = [z_c]
+    crowd_sorted.append(outranking)
+    crowd_sorted.append(crowd)
+
+    # if len(crowd_sorted) != len(individuals):
+    #     print ('ERROR: The sorted list of crowding distances is different length to original individuals list')
+
+    # calculate linear rank based fitness in method from https://books.google.co.uk/books?id=_w7jx5KS0b8C&pg=PA39&lpg=PA39&dq=simple+rank+based+fitness+assignment&source=bl&ots=WcnwQL3eeg&sig=ACfU3U1kKv9S2txlzvpgmVXXm6sgQ8mpqg&hl=en&sa=X&ved=2ahUKEwjk3oPLuI7hAhWfRBUIHYT3AcwQ6AEwC3oECAcQAQ#v=onepage&q=simple%20rank%20based%20fitness%20assignment&f=false
+    distances = [0.0] * len(individuals)
+    selection_pressure = 2
+    for i in range(0,len(distances)):
+        distances[i] = 2 - selection_pressure + 2 * (selection_pressure-1) * ((i-1)/(len(distances)-1))
+
+    # as the above method needs the items to be ordered with the least fit individual in position one, and the list is currently ordered with fittest individual first, the list must be reversed
+    distances.reverse()
+
+    for i in range(0,len(crowd_sorted)):
+        #crowd_sorted[i].append(distances[i])
+        # assign the linear rank based fitness to each individual
+        # this uses the i value referring to the original "individuals" index, which is located at crowd_sorted[i][1]
+        individuals[crowd_sorted[i][1]].fitness.crowding_dist = distances[i]
+        # assign the m_v value to each individual for plotting etc. later
+        individuals[crowd_sorted[i][1]].fitness.m_v = crowd_sorted[i][3]
+        # assign the d value to individuals for plotting etc. later
+        individuals[crowd_sorted[i][1]].fitness.d = crowd_sorted[i][2]
+
+#####################################################################
+
+
+
+
 
 __all__ = ['selNSGA2', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
-           'selTournamentDCD']
+           'selTournamentDCD', 'selLBS']
