@@ -609,24 +609,24 @@ def selLBS(individuals, k, nd='standard', z_v, z_r, v):
        non-dominated sorting genetic algorithm for multi-objective
        optimization: NSGA-II", 2002.
     """
-        if nd == 'standard':
-            pareto_fronts = sortNondominated(individuals, k)
-        elif nd == 'log':
-            pareto_fronts = sortLogNondominated(individuals, k)
-        else:
-            raise Exception('selNSGA2: The choice of non-dominated sorting '
-                            'method "{0}" is invalid.'.format(nd))
+    if nd == 'standard':
+        pareto_fronts = sortNondominated(individuals, k)
+    elif nd == 'log':
+        pareto_fronts = sortLogNondominated(individuals, k)
+    else:
+        raise Exception('selNSGA2: The choice of non-dominated sorting '
+                        'method "{0}" is invalid.'.format(nd))
 
-        for front in pareto_fronts:
-            assignLBSCrowdingDist(front, z_v, z_r)
+    for front in pareto_fronts:
+        assignLBSCrowdingDist(front, z_v, z_r)
 
-        chosen = list(chain(*pareto_fronts[:-1]))
-        k = k - len(chosen)
-        if k > 0:
-            sorted_front = sorted(pareto_fronts[-1], key=attrgetter("fitness.crowding_dist"), reverse=True)
-            chosen.extend(sorted_front[:k])
+    chosen = list(chain(*pareto_fronts[:-1]))
+    k = k - len(chosen)
+    if k > 0:
+        sorted_front = sorted(pareto_fronts[-1], key=attrgetter("fitness.crowding_dist"), reverse=True)
+        chosen.extend(sorted_front[:k])
 
-        return chosen
+    return chosen
 
 def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     """Assign a crowding distance to each individual's fitness. The
