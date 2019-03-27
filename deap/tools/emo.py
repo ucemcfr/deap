@@ -681,12 +681,13 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     for i in range(len(individuals)-1):
         m_v = 0
         for j in range(0, nobj):
-            print('j: ', j)
-            print('i:  ', i)
-            print('len ind: ', len(individuals))
-            print('crowd: ', crowd)
-            print('crowd[i]: ', crowd[i])
-            print('crowd[i][0][j]:  ', crowd[i][0][j])
+           # print('j: ', j)
+           # print('i:  ', i)
+           # print('len ind: ', len(individuals))
+           # print('crowd: ', crowd)
+           # print('crowd[i]: ', crowd[i])
+           # print('crowd[i][0][j]:  ', crowd[i][0][j])
+            print('z_c:   ', z_c)
             if (crowd[i][0][j] - z_c[0][j]) >= v[j]:
                 # crowd[i][3] is where the m_v values are stored
                 m_v += 1
