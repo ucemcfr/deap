@@ -618,7 +618,7 @@ def selLBS(individuals, k, z_v, z_r, v, nd='standard'):
                         'method "{0}" is invalid.'.format(nd))
 
     for front in pareto_fronts:
-        assignLBSCrowdingDist(front, z_v, z_r)
+        assignLBSCrowdingDist(front, z_v, z_r, v)
 
     chosen = list(chain(*pareto_fronts[:-1]))
     k = k - len(chosen)
