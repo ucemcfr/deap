@@ -609,6 +609,8 @@ def selLBS(individuals, k, z_v, z_r, v, nd='standard'):
        non-dominated sorting genetic algorithm for multi-objective
        optimization: NSGA-II", 2002.
     """
+
+    print('selLBS inds:  ', individuals[0].fitness.values)
     if nd == 'standard':
         pareto_fronts = sortNondominated(individuals, k)
     elif nd == 'log':
@@ -644,21 +646,24 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     # TODO there is a mistake here, z_v, z_r and v_j should be present, I've mixed up the z_v and v_j arrays, needs correcting.
 
     nobj = len(individuals[0].fitness.values)
-
+    print('nobj:  ', nobj)
+    print('inds:  ', individuals[0].fitness.values)
     lambda_list = []
 
     for i in range(0, nobj):
-        lambda_list[i] = 1 / (z_v[i] - z_r[i])
+        lambda_list.append(1 / (z_v[i] - z_r[i]))
 
+    print('lambda_list:  ',lambda_list)
     rho = 10**-6
 
     for i in range(0,len(individuals)):
         max_term = []
         sum_term = []
         for j in range(nobj):
-            max_term[j] = lambda_list[j] * (crowd[i][0][j] - z_r[j])
-            sum_term[j] = crowd[i][0][j] - z_r[j]
-
+            max_term.append(lambda_list[j] * (crowd[i][0][j] - z_r[j]))
+            sum_term.append(crowd[i][0][j] - z_r[j])
+        print('max term:  ', max_term)
+        print('sum term:  ', sum_term)
         # inserts a new level into the list with a d value in for each individual
         d = max(max_term) + rho * sum(sum_term)
         crowd[i].append(d)
@@ -673,20 +678,26 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     crowd.remove(min(crowd, key=lambda ind:ind[2]))
 
     # find the outranking solutions
-    for i in range(0,len(individuals)):
-        m_v = [0]
+    for i in range(len(individuals)-1):
+        m_v = 0
         for j in range(0, nobj):
+            print('j: ', j)
+            print('i:  ', i)
+            print('len ind: ', len(individuals))
+            print('crowd: ', crowd)
+            print('crowd[i]: ', crowd[i])
+            print('crowd[i][0][j]:  ', crowd[i][0][j])
             if (crowd[i][0][j] - z_c[0][j]) >= v[j]:
                 # crowd[i][3] is where the m_v values are stored
                 m_v[0] += 1
-                crowd[i].append(m_v)
+            crowd[i].append(m_v)
 
     # assign delta values to solutions that outrank the central point
-    for i in range(0, len(individuals)):
+    for i in range(0, len(individuals)-1):
         if crowd[i][3] == 0:
             delta_temp = []
             for j in range(0, nobj):
-                delta_temp[j] = crowd[i][0][j] - z_c[0][j]
+                delta_temp.append(crowd[i][0][j] - z_c[0][j])
             # crowd[i][4] is where the delta values are stored
             delta = max(delta_temp)
             crowd[i].append(delta)
@@ -694,16 +705,20 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     # filter those individuals that have m_v == 0
     outranking = [x for x in crowd if x[3] == 0]
 
-    # and remove them from the crowd list
-    crowd.remove([x for x in crowd if x[3] == 0])
+    # and rebuild the crowd list without them
+    crowd = [x for x in crowd if not x[3] == 0]
 
     # sort the outranking solutions by delta value
     outranking.sort(key=lambda x: x[4])
 
     # Building the list sorted by Z-c first, then outranking solutions sorted by delta, then remaining solutions sorted by d
     crowd_sorted = [z_c]
-    crowd_sorted.append(outranking)
-    crowd_sorted.append(crowd)
+    print('crowd_sorted:  ', crowd_sorted)
+
+    for item in outranking:
+        crowd_sorted.append(item)
+    for item in crowd:
+        crowd_sorted.append(item)
 
     # if len(crowd_sorted) != len(individuals):
     #     print ('ERROR: The sorted list of crowding distances is different length to original individuals list')
@@ -712,25 +727,33 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     distances = [0.0] * len(individuals)
     selection_pressure = 2
     for i in range(0,len(distances)):
+        # this if statement is to avoid division by zero errors when calculating the distances
+        # TODO what does the crowding distance become in this case?
+        # TODO why is only one individual being returned? I htink this is because there is only one individual in the front, is this correct? Why would this be the case?
+        if len(distances) == 1:
+            continue
         distances[i] = 2 - selection_pressure + 2 * (selection_pressure-1) * ((i-1)/(len(distances)-1))
 
     # as the above method needs the items to be ordered with the least fit individual in position one, and the list is currently ordered with fittest individual first, the list must be reversed
     distances.reverse()
 
+    # Saving the crowding distance for the individuals, this loop starts at 1 as the first point (z_c) doesn't have an m_v value
     for i in range(0,len(crowd_sorted)):
         #crowd_sorted[i].append(distances[i])
         # assign the linear rank based fitness to each individual
         # this uses the i value referring to the original "individuals" index, which is located at crowd_sorted[i][1]
+        print('crowd_sorted[i]:  ',crowd_sorted[i])
         individuals[crowd_sorted[i][1]].fitness.crowding_dist = distances[i]
+    for i in range(1, len(crowd_sorted)):
         # assign the m_v value to each individual for plotting etc. later
+        print('crowd sorted[i]:  ',crowd_sorted[i])
+        print('crowd sorted[i][3]:  ', crowd_sorted[i][3])
+        print('individuals:  ', individuals)
         individuals[crowd_sorted[i][1]].fitness.m_v = crowd_sorted[i][3]
         # assign the d value to individuals for plotting etc. later
         individuals[crowd_sorted[i][1]].fitness.d = crowd_sorted[i][2]
 
 #####################################################################
-
-
-
 
 
 __all__ = ['selNSGA2', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
