@@ -656,7 +656,7 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     #print(('lambda_list:  ',lambda_list))
     rho = 10**-6
 
-    for i in range(0,len(individuals)):
+    for i in range(len(individuals)):
         max_term = []
         sum_term = []
         for j in range(nobj):
@@ -666,14 +666,16 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
         #print(('sum term:  ', sum_term))
         # inserts a new level into the list with a d value in for each individual
         d = max(max_term) + rho * sum(sum_term)
-        crowd[i].append(d)
+        #crowd[i].append(d)
+        individuals[i].fitness.d = d
 
     # this sorts the crowd list by the d value which is index [2] in each individual [0] is objective values and [1] is i value
     crowd.sort(key=lambda ind:ind[2])
 
     # find the central point
     z_c = min(crowd, key=lambda ind:ind[2])
-
+    individuals[z_c[1]].fitness.z_c = True
+    
     # and remove it from the crowd list
     crowd.remove(min(crowd, key=lambda ind:ind[2]))
 
@@ -694,6 +696,7 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
         #print(('m_v:   ',m_v))
         print('m_v ', i, '   ', len(m_v))
         crowd[i].append(sum(m_v))
+        individuals[i].fitness.m_v = sum(m_v)
 
     # assign delta values to solutions that outrank the central point
     for i in range(len(crowd)):
@@ -704,6 +707,7 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
             # crowd[i][4] is where the delta values are stored
             delta = max(delta_temp)
             crowd[i].append(delta)
+            individuals[i].fitness.delta = delta
 
     # filter those individuals that have m_v == 0
     outranking = [x for x in crowd if x[3] == 0]
