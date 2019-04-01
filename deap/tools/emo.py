@@ -679,8 +679,8 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
 
     # find the outranking solutions
     for i in range(len(crowd)):
-        m_v = 0
-        for j in range(0, nobj):
+        m_v = []
+        for j in range(nobj):
            # print('j: ', j)
            # print('i:  ', i)
            # print('len ind: ', len(individuals))
@@ -690,9 +690,10 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
            # print('z_c:   ', z_c)
             if (crowd[i][0][j] - z_c[0][j]) >= v[j]:
                 # crowd[i][3] is where the m_v values are stored
-                m_v += 1
+                m_v.append(1)
         #print(('m_v:   ',m_v))
-        crowd[i].append(m_v)
+        print('m_v ', i, '   ', len(m_v))
+        crowd[i].append(sum(m_v))
 
     # assign delta values to solutions that outrank the central point
     for i in range(len(crowd)):
