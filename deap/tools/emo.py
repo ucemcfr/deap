@@ -666,7 +666,7 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
         #print(('sum term:  ', sum_term))
         # inserts a new level into the list with a d value in for each individual
         d = max(max_term) + rho * sum(sum_term)
-        #crowd[i].append(d)
+        crowd[i].append(d)
         individuals[i].fitness.d = d
 
     # this sorts the crowd list by the d value which is index [2] in each individual [0] is objective values and [1] is i value
@@ -730,7 +730,7 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     # TODO add more sophisticated fitness assignment, apply more selection pressure to good solutions.
     # calculate linear rank based fitness in method from https://books.google.co.uk/books?id=_w7jx5KS0b8C&pg=PA39&lpg=PA39&dq=simple+rank+based+fitness+assignment&source=bl&ots=WcnwQL3eeg&sig=ACfU3U1kKv9S2txlzvpgmVXXm6sgQ8mpqg&hl=en&sa=X&ved=2ahUKEwjk3oPLuI7hAhWfRBUIHYT3AcwQ6AEwC3oECAcQAQ#v=onepage&q=simple%20rank%20based%20fitness%20assignment&f=false
     distances = [0.0] * len(individuals)
-    selection_pressure = 10
+    selection_pressure = 2
     for i in range(len(distances)):
         # this if statement is to avoid division by zero errors when calculating the distances
         # TODO what does the crowding distance become in this case?
@@ -738,25 +738,26 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
         if len(distances) == 1:
             continue
         distances[i] = 2 - selection_pressure + 2 * (selection_pressure-1) * ((i-1)/(len(distances)-1))
+        individuals[i].fitness.crowding_dist = distances[i]
 
     # as the above method needs the items to be ordered with the least fit individual in position one, and the list is currently ordered with fittest individual first, the list must be reversed
     distances.reverse()
 
     # Saving the crowding distance for the individuals, this loop starts at 1 as the first point (z_c) doesn't have an m_v value
-    for i in range(0,len(crowd_sorted)):
+    #for i in range(0,len(crowd_sorted)):
         #crowd_sorted[i].append(distances[i])
         # assign the linear rank based fitness to each individual
         # this uses the i value referring to the original "individuals" index, which is located at crowd_sorted[i][1]
         #print(('crowd_sorted[i]:  ',crowd_sorted[i]))
-        individuals[crowd_sorted[i][1]].fitness.crowding_dist = distances[i]
-    for i in range(1, len(crowd_sorted)):
+        #individuals[crowd_sorted[i][1]].fitness.crowding_dist = distances[i]
+    #for i in range(1, len(crowd_sorted)):
         # assign the m_v value to each individual for plotting etc. later
         #print(('crowd sorted[i]:  ',crowd_sorted[i]))
         #print(('crowd sorted[i][3]:  ', crowd_sorted[i][3]))
         #print(('individuals:  ', individuals))
-        individuals[crowd_sorted[i][1]].fitness.m_v = crowd_sorted[i][3]
+        #individuals[crowd_sorted[i][1]].fitness.m_v = crowd_sorted[i][3]
         # assign the d value to individuals for plotting etc. later
-        individuals[crowd_sorted[i][1]].fitness.d = crowd_sorted[i][2]
+        #individuals[crowd_sorted[i][1]].fitness.d = crowd_sorted[i][2]
 
 #####################################################################
 
