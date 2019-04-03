@@ -760,14 +760,14 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v, return_inds=False):
     delta_sum = sum(delta_list)
 
     for ind in individuals:
-        if ind.fitness.z_c == True:
+        if ind.fitness.z_c is True:
             ind.fitness.crowding_dist = 2/max(delta_list)
         elif ind.fitness.m_v == 0:
             if ind.fitness.delta == 0:
                 continue
             else:
                 ind.fitness.crowding_dist = 1/ind.fitness.delta # TODO this returns a divide by zero error at times
-        elif z_c == False and ind.fitness.m_v != 0:
+        elif z_c is False and ind.fitness.m_v != 0:
             ind.fitness.crowding_dist = 0
         else:
             raise Exception('delta not properly assigned')
