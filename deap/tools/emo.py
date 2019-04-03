@@ -610,7 +610,6 @@ def selLBS(individuals, k, z_v, z_r, v, nd='standard'):
        optimization: NSGA-II", 2002.
     """
 
-    #print(('selLBS inds:  ', individuals[0].fitness.values))
     if nd == 'standard':
         pareto_fronts = sortNondominated(individuals, k)
     elif nd == 'log':
@@ -630,7 +629,7 @@ def selLBS(individuals, k, z_v, z_r, v, nd='standard'):
 
     return chosen
 
-def assignLBSCrowdingDist(individuals, z_v, z_r, v):
+def assignLBSCrowdingDist(individuals, z_v, z_r, v, return_inds=False):
     """Assign a crowding distance to each individual's fitness. The
     crowding distance can be retrieve via the :attr:`crowding_dist`
     attribute of each individual's fitness.
@@ -639,128 +638,173 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v):
     if len(individuals) == 0:
        return
 
+    for ind in individuals:
+        ind.fitness.m_v = None
+        ind.fitness.d = None
+        ind.fitness.z_c = False
+        ind.fitness.delta = None
+        ind.fitness.crowding_dist = None
+        ind.fitness.front = None
+
     # this creates a list of fitness values for all individuals, with an index referring to the original list of individuals so the crowding distance can later be assignme
     crowd = [[ind.fitness.values, i] for i, ind in enumerate(individuals)]
-    # TODO need to pass the aspiration point, reservation point, and veto points to this function
-    # TODO where does the aspiration point come in?
-    # TODO there is a mistake here, z_v, z_r and v_j should be present, I've mixed up the z_v and v_j arrays, needs correcting.
 
     nobj = len(individuals[0].fitness.values)
-    #print(('nobj:  ', nobj))
-    #print(('inds:  ', individuals[0].fitness.values))
+
     lambda_list = []
 
-    for i in range(0, nobj):
+    for i in range(nobj):
         lambda_list.append(1 / (z_v[i] - z_r[i]))
 
-    #print(('lambda_list:  ',lambda_list))
+
     rho = 10**-6
 
-    for i in range(len(individuals)):
+    # for i in range(len(individuals)):
+    #     max_term = []
+    #     sum_term = []
+    #     for j in range(nobj):
+    #         max_term.append(lambda_list[j] * (crowd[i][0][j] - z_r[j]))
+    #         sum_term.append(crowd[i][0][j] - z_r[j])
+    #     #print(('max term:  ', max_term))
+    #     #print(('sum term:  ', sum_term))
+    #     # inserts a new level into the list with a d value in for each individual
+    #     d = max(max_term) + rho * sum(sum_term)
+    #     crowd[i].append(d)
+    #     individuals[i].fitness.d = d
+
+    for i, ind in enumerate(individuals):
         max_term = []
         sum_term = []
         for j in range(nobj):
-            max_term.append(lambda_list[j] * (crowd[i][0][j] - z_r[j]))
-            sum_term.append(crowd[i][0][j] - z_r[j])
-        #print(('max term:  ', max_term))
-        #print(('sum term:  ', sum_term))
-        # inserts a new level into the list with a d value in for each individual
-        d = max(max_term) + rho * sum(sum_term)
-        crowd[i].append(d)
-        individuals[i].fitness.d = d
+            max_term.append(lambda_list[j] * (ind.fitness.values[j] - z_r[j]))
+            sum_term.append(ind.fitness.values[j] - z_r[j])
+        ind.fitness.d = max(max_term) + rho * sum(sum_term)
 
     # this sorts the crowd list by the d value which is index [2] in each individual [0] is objective values and [1] is i value
-    crowd.sort(key=lambda ind:ind[2])
+    #crowd.sort(key=lambda ind:ind[2])
 
     # find the central point
-    z_c = min(crowd, key=lambda ind:ind[2])
-    individuals[z_c[1]].fitness.z_c = True
+    z_c = min(individuals, key=lambda ind:ind.fitness.d)
+    min(individuals, key=lambda ind:ind.fitness.d).fitness.z_c = True
+    z_c.fitness.z_c = True
+    #individuals[z_c[1]].fitness.z_c = True
     
     # and remove it from the crowd list
-    crowd.remove(min(crowd, key=lambda ind:ind[2]))
+    #crowd.remove(min(crowd, key=lambda ind:ind[2]))
 
     # find the outranking solutions
-    for i in range(len(crowd)):
-        m_v = []
-        for j in range(nobj):
-           # print('j: ', j)
-           # print('i:  ', i)
-           # print('len ind: ', len(individuals))
-           # print('crowd: ', crowd)
-           # print('crowd[i]: ', crowd[i])
-           # print('crowd[i][0][j]:  ', crowd[i][0][j])
-           # print('z_c:   ', z_c)
-            if (crowd[i][0][j] - z_c[0][j]) >= v[j]:
-                # crowd[i][3] is where the m_v values are stored
-                m_v.append(1)
-        #print(('m_v:   ',m_v))
-        print('m_v ', i, '   ', len(m_v))
-        crowd[i].append(sum(m_v))
-        individuals[i].fitness.m_v = sum(m_v)
+    # for i in range(len(crowd)):
+    #     m_v = []
+    #     for j in range(nobj):
+    #         if (crowd[i][0][j] - z_c[0][j]) >= v[j]:
+    #             # crowd[i][3] is where the m_v values are stored
+    #             m_v.append(1)
+    #     crowd[i].append(sum(m_v))
+    #     individuals[i].fitness.m_v = sum(m_v)
+
+    for i, ind in enumerate(individuals):
+        if ind.fitness.z_c == True:
+            continue
+        else:
+            ind.fitness.m_v = 0
+            for j in range(nobj):
+                if (abs(ind.fitness.values[j] - z_c.fitness.values[j]) >= v[j]):
+                    if ind.fitness.m_v is None:
+                        ind.fitness.m_v = 1
+                    else:
+                        ind.fitness.m_v += 1
+                #else:
+            #    ind.fitness.m_v = 0
 
     # assign delta values to solutions that outrank the central point
-    for i in range(len(crowd)):
-        if crowd[i][3] == 0:
+    # for i in range(len(crowd)):
+    #     if crowd[i][3] == 0:
+    #         delta_temp = []
+    #         for j in range(0, nobj):
+    #             delta_temp.append(crowd[i][0][j] - z_c[0][j])
+    #         # crowd[i][4] is where the delta values are stored
+    #         delta = max(delta_temp)
+    #         crowd[i].append(delta)
+    #         individuals[i].fitness.delta = delta
+
+    for ind in individuals:
+        if ind.fitness.m_v == 0:
             delta_temp = []
-            for j in range(0, nobj):
-                delta_temp.append(crowd[i][0][j] - z_c[0][j])
-            # crowd[i][4] is where the delta values are stored
+            for j in range(nobj):
+                delta_temp.append(ind.fitness.values[j] - z_c.fitness.values[j])
             delta = max(delta_temp)
-            crowd[i].append(delta)
-            individuals[i].fitness.delta = delta
+            ind.fitness.delta = delta
+        else:
+            ind.fitness.delta = None
 
-    # filter those individuals that have m_v == 0
-    outranking = [x for x in crowd if x[3] == 0]
+    # # filter those individuals that have m_v == 0
+    # outranking = [x for x in crowd if x[3] == 0]
+    #
+    # # and rebuild the crowd list without them
+    # crowd = [x for x in crowd if not x[3] == 0]
+    #
+    # # sort the outranking solutions by delta value
+    # outranking.sort(key=lambda x: x[4])
+    #
+    # # Building the list sorted by Z-c first, then outranking solutions sorted by delta, then remaining solutions sorted by d
+    # crowd_sorted = [z_c]
+    # #print(('crowd_sorted:  ', crowd_sorted))
+    #
+    # for item in outranking:
+    #     crowd_sorted.append(item)
+    # for item in crowd:
+    #     crowd_sorted.append(item)
 
-    # and rebuild the crowd list without them
-    crowd = [x for x in crowd if not x[3] == 0]
+    delta_list = [ind.fitness.delta for ind in individuals if ind.fitness.delta is not None]
+    print(delta_list)
+    delta_sum = sum(delta_list)
+    if delta_sum == 0:
+        delta_sum = 1
 
-    # sort the outranking solutions by delta value
-    outranking.sort(key=lambda x: x[4])
+    for ind in individuals:
+        if ind.fitness.z_c == True:
+            ind.fitness.crowding_dist = 1000
+        elif ind.fitness.m_v == 0:
+            ind.fitness.crowding_dist = 1/ind.fitness.delta/delta_sum # TODO this returns a divide by zero error at times
+        else:
+            ind.fitness.crowding_dist = delta_sum/10**-6
 
-    # Building the list sorted by Z-c first, then outranking solutions sorted by delta, then remaining solutions sorted by d
-    crowd_sorted = [z_c]
-    #print(('crowd_sorted:  ', crowd_sorted))
 
-    for item in outranking:
-        crowd_sorted.append(item)
-    for item in crowd:
-        crowd_sorted.append(item)
-
-    # TODO add more sophisticated fitness assignment, apply more selection pressure to good solutions.
-    # calculate linear rank based fitness in method from https://books.google.co.uk/books?id=_w7jx5KS0b8C&pg=PA39&lpg=PA39&dq=simple+rank+based+fitness+assignment&source=bl&ots=WcnwQL3eeg&sig=ACfU3U1kKv9S2txlzvpgmVXXm6sgQ8mpqg&hl=en&sa=X&ved=2ahUKEwjk3oPLuI7hAhWfRBUIHYT3AcwQ6AEwC3oECAcQAQ#v=onepage&q=simple%20rank%20based%20fitness%20assignment&f=false
-    distances = [0.0] * len(individuals)
-    selection_pressure = 2
-    for i in range(len(distances)):
-        # this if statement is to avoid division by zero errors when calculating the distances
-        # TODO what does the crowding distance become in this case?
-        # TODO why is only one individual being returned? I htink this is because there is only one individual in the front, is this correct? Why would this be the case?
-        if len(distances) == 1:
-            continue
-        distances[i] = 2 - selection_pressure + 2 * (selection_pressure-1) * ((i-1)/(len(distances)-1))
-        individuals[i].fitness.crowding_dist = distances[i]
-
-    # as the above method needs the items to be ordered with the least fit individual in position one, and the list is currently ordered with fittest individual first, the list must be reversed
-    distances.reverse()
-
-    # Saving the crowding distance for the individuals, this loop starts at 1 as the first point (z_c) doesn't have an m_v value
-    #for i in range(0,len(crowd_sorted)):
-        #crowd_sorted[i].append(distances[i])
-        # assign the linear rank based fitness to each individual
-        # this uses the i value referring to the original "individuals" index, which is located at crowd_sorted[i][1]
-        #print(('crowd_sorted[i]:  ',crowd_sorted[i]))
-        #individuals[crowd_sorted[i][1]].fitness.crowding_dist = distances[i]
-    #for i in range(1, len(crowd_sorted)):
-        # assign the m_v value to each individual for plotting etc. later
-        #print(('crowd sorted[i]:  ',crowd_sorted[i]))
-        #print(('crowd sorted[i][3]:  ', crowd_sorted[i][3]))
-        #print(('individuals:  ', individuals))
-        #individuals[crowd_sorted[i][1]].fitness.m_v = crowd_sorted[i][3]
-        # assign the d value to individuals for plotting etc. later
-        #individuals[crowd_sorted[i][1]].fitness.d = crowd_sorted[i][2]
+    # # TODO add more sophisticated fitness assignment, apply more selection pressure to good solutions.
+    # # calculate linear rank based fitness in method from https://books.google.co.uk/books?id=_w7jx5KS0b8C&pg=PA39&lpg=PA39&dq=simple+rank+based+fitness+assignment&source=bl&ots=WcnwQL3eeg&sig=ACfU3U1kKv9S2txlzvpgmVXXm6sgQ8mpqg&hl=en&sa=X&ved=2ahUKEwjk3oPLuI7hAhWfRBUIHYT3AcwQ6AEwC3oECAcQAQ#v=onepage&q=simple%20rank%20based%20fitness%20assignment&f=false
+    # distances = [0.0] * len(individuals)
+    # selection_pressure = 2
+    # for i in range(len(distances)):
+    #     # this if statement is to avoid division by zero errors when calculating the distances
+    #     # TODO what does the crowding distance become in this case?
+    #     # TODO why is only one individual being returned? I htink this is because there is only one individual in the front, is this correct? Why would this be the case?
+    #     if len(distances) == 1:
+    #         continue
+    #     distances[i] = 2 - selection_pressure + 2 * (selection_pressure-1) * ((i-1)/(len(distances)-1))
+    #     individuals[i].fitness.crowding_dist = distances[i]
+    #
+    # # as the above method needs the items to be ordered with the least fit individual in position one, and the list is currently ordered with fittest individual first, the list must be reversed
+    # distances.reverse()
+    #
+    # # Saving the crowding distance for the individuals, this loop starts at 1 as the first point (z_c) doesn't have an m_v value
+    # #for i in range(0,len(crowd_sorted)):
+    #     #crowd_sorted[i].append(distances[i])
+    #     # assign the linear rank based fitness to each individual
+    #     # this uses the i value referring to the original "individuals" index, which is located at crowd_sorted[i][1]
+    #     #print(('crowd_sorted[i]:  ',crowd_sorted[i]))
+    #     #individuals[crowd_sorted[i][1]].fitness.crowding_dist = distances[i]
+    # #for i in range(1, len(crowd_sorted)):
+    #     # assign the m_v value to each individual for plotting etc. later
+    #     #print(('crowd sorted[i]:  ',crowd_sorted[i]))
+    #     #print(('crowd sorted[i][3]:  ', crowd_sorted[i][3]))
+    #     #print(('individuals:  ', individuals))
+    #     #individuals[crowd_sorted[i][1]].fitness.m_v = crowd_sorted[i][3]
+    #     # assign the d value to individuals for plotting etc. later
+    #     #individuals[crowd_sorted[i][1]].fitness.d = crowd_sorted[i][2]
+    if return_inds == True:
+        return individuals
 
 #####################################################################
-
-
+    
 __all__ = ['selNSGA2', 'selSPEA2', 'sortNondominated', 'sortLogNondominated',
            'selTournamentDCD', 'selLBS']
