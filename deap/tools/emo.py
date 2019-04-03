@@ -758,8 +758,6 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v, return_inds=False):
     delta_list = [ind.fitness.delta for ind in individuals if ind.fitness.delta is not None]
     print(delta_list)
     delta_sum = sum(delta_list)
-    if delta_sum == 0:
-        delta_sum = 1
 
     for ind in individuals:
         if ind.fitness.z_c == True:
@@ -767,7 +765,7 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v, return_inds=False):
         elif ind.fitness.m_v == 0:
             ind.fitness.crowding_dist = 1/ind.fitness.delta/delta_sum # TODO this returns a divide by zero error at times
         else:
-            ind.fitness.crowding_dist = delta_sum/10**-6
+            ind.fitness.crowding_dist = 0
 
 
     # # TODO add more sophisticated fitness assignment, apply more selection pressure to good solutions.
