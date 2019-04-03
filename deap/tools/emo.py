@@ -769,7 +769,7 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v, return_inds=False):
         elif z_c is False and ind.fitness.delta is None:
             ind.fitness.crowding_dist = 0
         else:
-            raise Exception('delta not properly assigned')
+            raise Exception('delta not properly assigned', ind.fitness.z_c, ind.fitness.delta, ind.fitness.crowding_dist)
 
 
     # # TODO add more sophisticated fitness assignment, apply more selection pressure to good solutions.
