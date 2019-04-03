@@ -761,13 +761,12 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v, return_inds=False):
 
     for ind in individuals:
         if ind.fitness.z_c is True:
+            print('assigned z_c crowding dist')
             ind.fitness.crowding_dist = 2/max(delta_list)
         elif ind.fitness.m_v == 0:
-            if ind.fitness.delta == 0:
-                continue
-            else:
-                ind.fitness.crowding_dist = 1/ind.fitness.delta # TODO this returns a divide by zero error at times
-        elif z_c is False and ind.fitness.m_v != 0:
+            print('assigned outranking crowding dist', 1/ind.fitness.delta)
+            ind.fitness.crowding_dist = 1/ind.fitness.delta  # TODO this returns a divide by zero error at times
+        elif z_c is False and ind.fitness.delta is None:
             ind.fitness.crowding_dist = 0
         else:
             raise Exception('delta not properly assigned')
