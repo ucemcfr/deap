@@ -761,11 +761,16 @@ def assignLBSCrowdingDist(individuals, z_v, z_r, v, return_inds=False):
 
     for ind in individuals:
         if ind.fitness.z_c == True:
-            ind.fitness.crowding_dist = 1000
+            ind.fitness.crowding_dist = 2/max(delta_list)
         elif ind.fitness.m_v == 0:
-            ind.fitness.crowding_dist = 1/ind.fitness.delta/delta_sum # TODO this returns a divide by zero error at times
-        else:
+            if ind.fitness.delta == 0:
+                continue
+            else:
+                ind.fitness.crowding_dist = 1/ind.fitness.delta # TODO this returns a divide by zero error at times
+        elif z_c == False and ind.fitness.m_v != 0:
             ind.fitness.crowding_dist = 0
+        else:
+            raise Exception('delta not properly assigned')
 
 
     # # TODO add more sophisticated fitness assignment, apply more selection pressure to good solutions.
