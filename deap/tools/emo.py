@@ -618,8 +618,8 @@ def selLBS(individuals, k, z_v, z_r, v, nd='standard'):
         raise Exception('selNSGA2: The choice of non-dominated sorting '
                         'method "{0}" is invalid.'.format(nd))
 
-    for front in pareto_fronts:
-        assignLBSCrowdingDist(front, z_v, z_r, v)
+    #for front in pareto_fronts:
+    #    assignLBSCrowdingDist(front, z_v, z_r, v)
 
     chosen = list(chain(*pareto_fronts[:-1]))
     k = k - len(chosen)
